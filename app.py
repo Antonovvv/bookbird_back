@@ -11,7 +11,10 @@ app = Flask(__name__)
 def root():
     return 'Not Found'
 
-@app.route('/')
+
+@app.route('/wx')
+def public():
+    pass
 
 
 if __name__ == '__main__':
