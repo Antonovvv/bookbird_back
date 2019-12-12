@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def root():
-    return 'Not Found'
+    return '这是不渴鸟！'
 
 
 @app.route('/wx')
