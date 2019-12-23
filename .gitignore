@@ -1,3 +1,5 @@
 .idea
 venv
 confs/*
+test.*
+models/create_table.py

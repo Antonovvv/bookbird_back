@@ -4,9 +4,24 @@ from flask import Flask, request, abort
 from wechatpy.utils import check_signature
 from wechatpy.exceptions import InvalidSignatureException
 
+from werkzeug.utils import import_string
+
 from config import *
+from ext import database as db
+from ext import logger
 
 app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = DB_URI
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
+
+db.init_app(app)
+
+blueprints = [
+    'views.api_wxapp:app'
+]
+for bp_name in blueprints:
+    bp = import_string(bp_name)
+    app.register_blueprint(bp)
 
 
 @app.route('/')

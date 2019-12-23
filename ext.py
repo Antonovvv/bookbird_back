@@ -4,3 +4,8 @@ import logging
 
 database = SQLAlchemy()
 
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s -%(name)s-%(levelname)s- %(message)s',
+                    filename='./log/mp.log',
+                    filemode='a')
+logger = logging.getLogger(__name__)
