@@ -17,7 +17,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 db.init_app(app)
 
 blueprints = [
-    'views.api_wxapp:app'
+    'views.api_wxapp_book:app',
+    'views.api_wxapp_post:app',
+    'views.api_wxapp_user:app'
 ]
 for bp_name in blueprints:
     bp = import_string(bp_name)
@@ -26,7 +28,7 @@ for bp_name in blueprints:
 
 @app.route('/')
 def root():
-    return '这是不渴鸟！'
+    return 'Not Found'
 
 
 # 公众号接口

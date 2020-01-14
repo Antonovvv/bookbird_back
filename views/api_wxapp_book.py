@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 from flask import Blueprint, request, jsonify, abort
-from models import Book, Post, User
+from models import Book
 
 import requests
 
@@ -8,7 +8,7 @@ from ext import database as db
 from ext import logger
 from config import *
 
-app = Blueprint('api_wxapp', __name__, url_prefix='/api/mp')
+app = Blueprint('api_wxapp_book', __name__, url_prefix='/api/mp/book')
 
 url_isbn = 'https://douban.uieee.com/v2/book/isbn/'
 headers = {
@@ -17,7 +17,7 @@ headers = {
 }
 
 
-@app.route('/book/isbn/<isbn>/', methods=['GET'])
+@app.route('/isbn/<isbn>/', methods=['GET'])
 def book(isbn):
     book_found = Book.get_by_isbn(isbn)
     if request.method == 'GET':

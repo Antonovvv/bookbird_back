@@ -11,8 +11,8 @@ class User(db.Model):
     money_paid = db.Column(db.Integer, nullable=False)
     money_earned = db.Column(db.Integer, nullable=False)
 
-    posts = db.relationship('Post', backref='user', lazy='dynamic')
-    cart_items = db.relationship('CartItem', backref='user')
+    # posts = db.relationship('Post', backref='user', lazy='dynamic')
+    # cart_items = db.relationship('CartItem', backref='user')
 
     def __init__(self, openid, name, student_id, dorm):
         self.openid = openid
@@ -24,4 +24,4 @@ class User(db.Model):
 
     @classmethod
     def get_by_openid(cls, openid):
-        pass
+        return cls.query.filter_by(openid=openid).first()

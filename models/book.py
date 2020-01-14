@@ -10,9 +10,9 @@ class Book(db.Model):
     author = db.Column(db.String(128))
     publisher = db.Column(db.String(128))
     pubdate = db.Column(db.String(32))
-    original_price = db.Column(db.Integer, nullable=False)
+    original_price = db.Column(db.String(32), nullable=False)
 
-    posts = db.relationship('Post', backref='book', lazy='dynamic')
+    # posts = db.relationship('Post', backref='book', lazy='dynamic')
 
     def __init__(self, isbn, book_name, image_url='', author='', publisher='', pubdate='', original_price='0'):
         self.isbn = isbn
