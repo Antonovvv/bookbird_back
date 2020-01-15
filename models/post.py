@@ -19,7 +19,7 @@ class Post(db.Model):
     book_isbn = db.Column(db.String(32), db.ForeignKey('book.isbn'), nullable=False)
     seller_openid = db.Column(db.String(128), db.ForeignKey('user.openid'), nullable=False)
 
-    def __init__(self, bookname, price, new, description, isbn, openid):
+    def __init__(self, isbn, openid, bookname='', price=0, new=0, description=''):
         self.book_name = bookname
         self.image_name = uuid.uuid4().hex  # 随机hash值作为图片文件名
         self.post_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

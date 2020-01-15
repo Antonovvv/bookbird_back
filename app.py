@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from flask import Flask, request, abort
 
+from wechatpy.client import WeChatClient
 from wechatpy.utils import check_signature
 from wechatpy.exceptions import InvalidSignatureException
 
@@ -15,6 +16,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = DB_URI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 
 db.init_app(app)
+
+pub_client = WeChatClient(pub_APPID, pub_APPSECRET)
+mp_client = WeChatClient(mp_APPID, mp_APPSECRET)
 
 blueprints = [
     'views.api_wxapp_book:app',
