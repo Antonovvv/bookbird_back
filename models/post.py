@@ -32,3 +32,15 @@ class Post(db.Model):
     @classmethod
     def get_by_isbn(cls, isbn):
         return cls.query.filter_by(book_isbn=isbn).all()
+
+    @classmethod
+    def search_by_name(cls, name):
+        return cls.query.filter(cls.book_name.like('%' + name + '%')) if name else None
+
+    @classmethod
+    def result(cls):
+        return dict(book_name=cls.book_name,
+                    image_name=cls.image_name,
+                    post_time=cls.post_time,
+                    sale=cls.sale_price,
+                    new=cls.new)

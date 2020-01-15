@@ -28,3 +28,7 @@ class User(db.Model):
     @classmethod
     def get_by_openid(cls, openid):
         return cls.query.filter_by(openid=openid).first()
+
+    @classmethod
+    def get_by_token(cls, token):
+        return cls.query.filter_by(token=token).first()

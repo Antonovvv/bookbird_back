@@ -25,10 +25,10 @@ def user_login():
         token = hashlib.md5(strs.encode('utf-8')).hexdigest()   # 合并openid与session_key，MD5加密得到token
 
         user_found = User.get_by_openid(openid)
-        if not user_found:
+        if not user_found:  # 新用户
             # noinspection PyBroadException
             try:
-                user_ = User(openid=openid, token=token)
+                user_ = User(openid=openid, token=token)    # 新增
                 db.session.add(user_)
                 db.session.commit()
                 return jsonify({
@@ -37,20 +37,23 @@ def user_login():
             except Exception:
                 pass
         else:
-            # noinspection PyBroadException
-            try:
-                user_found.token = token
-                db.session.commit()
-                return jsonify({
-                    'token': token
-                })
-            except Exception:
+            if token == user_found.token:   # session_key未过期
                 pass
+            else:
+                # noinspection PyBroadException
+                try:
+                    user_found.token = token    # 替换为新token
+                    db.session.commit()
+                except Exception:
+                    pass
+            return jsonify({
+                'token': token
+            })
     else:
         return 'invalid code', 404
 
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST', 'PUT'])
 def user():
     if request.method == 'POST':
         openid = request.form['openid']

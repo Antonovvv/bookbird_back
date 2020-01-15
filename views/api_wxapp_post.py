@@ -28,24 +28,44 @@ def post():
         new = request.form['new']
         description = request.form['description']
         isbn = request.form['ISBN']
-        openid = request.form['openid']
+        token = request.form['token']
         logger.info("post_isbn: {}".format(isbn))
 
+        user_found = User.get_by_token(token)
         book_found = Book.get_by_isbn(isbn)
         if not book_found:
             return jsonify({
                 'errMsg': 'invalid isbn'
             }), 404
         else:
-            post_ = Post(bookname=bookname, price=price, new=new, description=description, isbn=isbn, openid=openid)
+            post_ = Post(bookname=bookname, price=price, new=new, description=description,
+                         isbn=isbn, openid=user_found.openid)
             db.session.add(post_)
             db.session.commit()
 
             key = post_.image_name
-            token = q.upload_token(bucket_name, key, 3600)
+            up_token = q.upload_token(bucket_name, key, 3600)
             return jsonify({
-                'token': token,
+                'token': up_token,
                 'key': key
             })
+    elif request.method == 'GET':
+        book_name = request.args.get('bookName', '')
+        posts = Post.search_by_name(book_name)
+        search_list = list()
 
+        if posts:
+            for item in posts:
+                # logger.info(item.book_name)
+                search_item = dict(bookName=item.book_name,
+                                   imageName=item.image_name,
+                                   postTime=item.post_time,
+                                   sale=item.sale_price,
+                                   new=item.new)
+                search_list.append(search_item)
+
+            return jsonify({
+                'msg': 'request:ok',
+                'searchRes': search_list
+            })
     return 'else'
