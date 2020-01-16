@@ -20,7 +20,7 @@ q = Auth(AK, SK)
 bucket_name = 'bookbird'
 
 
-@app.route('/', methods=['GET', 'POST', 'PUT'])
+@app.route('', methods=['GET', 'POST', 'PUT'])
 def post():
     if request.method == 'POST':
         bookname = request.form['bookName']
@@ -46,26 +46,32 @@ def post():
             key = post_.image_name
             up_token = q.upload_token(bucket_name, key, 3600)
             return jsonify({
-                'token': up_token,
+                'upToken': up_token,
                 'key': key
-            })
+            }), 201
     elif request.method == 'GET':
         book_name = request.args.get('bookName', '')
         posts = Post.search_by_name(book_name)
-        search_list = list()
+        # logger.info(posts)
 
+        search_list = list()
         if posts:
             for item in posts:
                 # logger.info(item.book_name)
-                search_item = dict(bookName=item.book_name,
+                search_item = dict(postId=item.id,
+                                   bookName=item.book_name,
                                    imageName=item.image_name,
                                    postTime=item.post_time,
                                    sale=item.sale_price,
-                                   new=item.new)
+                                   new=item.new,
+                                   author=item.book.author,
+                                   publisher=item.book.publisher)
                 search_list.append(search_item)
 
             return jsonify({
                 'msg': 'request:ok',
                 'searchRes': search_list
             })
+        else:
+            abort(404)
     return 'else'

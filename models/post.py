@@ -19,6 +19,10 @@ class Post(db.Model):
     book_isbn = db.Column(db.String(32), db.ForeignKey('book.isbn'), nullable=False)
     seller_openid = db.Column(db.String(128), db.ForeignKey('user.openid'), nullable=False)
 
+    book = db.relationship('Book', backref=db.backref('posts'))
+
+    is_valid = db.Column(db.Boolean, nullable=False)
+
     def __init__(self, isbn, openid, bookname='', price=0, new=0, description=''):
         self.book_name = bookname
         self.image_name = uuid.uuid4().hex  # 随机hash值作为图片文件名
@@ -26,8 +30,10 @@ class Post(db.Model):
         self.sale_price = price
         self.new = new
         self.description = description
+
         self.book_isbn = isbn
         self.seller_openid = openid
+        self.is_valid = True
 
     @classmethod
     def get_by_isbn(cls, isbn):
@@ -35,12 +41,4 @@ class Post(db.Model):
 
     @classmethod
     def search_by_name(cls, name):
-        return cls.query.filter(cls.book_name.like('%' + name + '%')) if name else None
-
-    @classmethod
-    def result(cls):
-        return dict(book_name=cls.book_name,
-                    image_name=cls.image_name,
-                    post_time=cls.post_time,
-                    sale=cls.sale_price,
-                    new=cls.new)
+        return cls.query.filter(cls.book_name.like('%' + name + '%')).all() if name else None

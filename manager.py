@@ -13,8 +13,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 db.init_app(app)
 import models.admin, models.user, models.book, models.post, models.cart_item
 
-migrate = Migrate(app, db)
 manager = Manager(app)
+migrate = Migrate(app, db)
+
 manager.add_command("db", MigrateCommand)
 
 if __name__ == "__main__":

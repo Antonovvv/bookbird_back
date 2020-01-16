@@ -4,7 +4,7 @@ import requests
 import hashlib
 
 from app import mp_client
-from models import Book, Post, User
+from models import Book, Post, User, CartItem
 from ext import database as db
 from ext import logger
 from utils import *
@@ -33,7 +33,7 @@ def user_login():
                 db.session.commit()
                 return jsonify({
                     'token': token
-                })
+                }), 201
             except Exception:
                 pass
         else:
@@ -51,6 +51,91 @@ def user_login():
             })
     else:
         return 'invalid code', 404
+
+
+@app.route('/cart', methods=['GET', 'POST', 'DELETE'])
+def cart():
+    if request.method == 'POST':
+        token = request.form['token']
+        post_id = int(request.form['postId'])
+        if token and post_id:
+            user_found = User.get_by_token(token)   # 参数为字符，转为int
+            if user_found:
+                if post_id not in [item.post_id for item in user_found.cart]:
+                    # noinspection PyBroadException
+                    try:
+                        cart_item_ = CartItem(openid=user_found.openid, post_id=post_id)
+                        db.session.add(cart_item_)
+                        db.session.commit()
+                        return jsonify({
+                            'cartItemId': cart_item_.id
+                        }), 201
+                    except Exception:
+                        pass
+                else:
+                    return jsonify({
+                        'errMsg': 'item exists'
+                    }), 403
+            else:
+                return jsonify({
+                    'errMsg': 'user not found'
+                }), 404
+        else:
+            return jsonify({
+                'errMsg': 'need params'
+            }), 404
+
+    elif request.method == 'GET':
+        token = request.args.get('token', '')
+        if token:
+            user_found = User.get_by_token(token)
+            # cart_items = CartItem.get_by_openid(openid=user_found.openid)
+            cart_items = user_found.cart
+            # logger.info(cart_items)
+
+            cart_list = list()
+            if cart_items:
+                for item in cart_items:
+                    cart_item = dict(cartItemId=item.id,
+                                     bookName=item.post.book_name,
+                                     imageName=item.post.image_name,
+                                     sale=item.post.sale_price,
+                                     author=item.post.book.author,
+                                     publisher=item.post.book.publisher,
+                                     checked=item.is_checked,
+                                     valid=item.post.is_valid)
+                    cart_list.append(cart_item)
+
+                return jsonify({
+                    'msg': 'request:ok',
+                    'cartList': cart_list
+                })
+            else:
+                abort(404)
+        else:
+            return jsonify({
+                'errMsg': 'need token'
+            })
+
+    elif request.method == 'DELETE':
+        delete_list = request.form['deleteList'].split(',')     # 参数为字符串，拆分得到字符数组，逐个转为int
+        # logger.info(delete_list)
+        if delete_list:
+            # noinspection PyBroadException
+            try:
+                for item_id in delete_list:
+                    cart_item = CartItem.get_by_id(item_id=int(item_id))
+                    db.session.delete(cart_item)
+                    db.session.commit()
+                return jsonify({
+                    'msg': 'delete:ok'
+                })
+            except Exception:
+                abort(500)
+        else:
+            return jsonify({
+                'errMsg': 'need id'
+            }), 404
 
 
 @app.route('/', methods=['GET', 'POST', 'PUT'])
