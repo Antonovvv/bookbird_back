@@ -64,8 +64,11 @@ def post():
                                    postTime=item.post_time,
                                    sale=item.sale_price,
                                    new=item.new,
+                                   addr=item.seller.dorm,
                                    author=item.book.author,
-                                   publisher=item.book.publisher)
+                                   publisher=item.book.publisher,
+                                   pubdate=item.book.pubdate,
+                                   originalPrice=item.book.original_price)
                 search_list.append(search_item)
 
             return jsonify({

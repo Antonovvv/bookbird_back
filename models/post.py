@@ -20,6 +20,7 @@ class Post(db.Model):
     seller_openid = db.Column(db.String(128), db.ForeignKey('user.openid'), nullable=False)
 
     book = db.relationship('Book', backref=db.backref('posts'))
+    seller = db.relationship('User', backref=db.backref('posts'))
 
     is_valid = db.Column(db.Boolean, nullable=False)
 

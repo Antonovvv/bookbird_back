@@ -20,7 +20,7 @@ def user_login():
         session_res = mp_client.wxa.code_to_session(code)
         openid = session_res['openid']
         key = session_res['session_key']
-        logger.info(openid)
+        logger.info('login: ' + openid)
         strs = openid + key
         token = hashlib.md5(strs.encode('utf-8')).hexdigest()   # 合并openid与session_key，MD5加密得到token
 
@@ -35,7 +35,10 @@ def user_login():
                     'token': token
                 }), 201
             except Exception:
-                pass
+                logger.info('fail: ' + openid + token)
+                return jsonify({
+                    'errMsg': 'new user fail'
+                }), 500
         else:
             if token == user_found.token:   # session_key未过期
                 pass
@@ -71,7 +74,7 @@ def cart():
                             'cartItemId': cart_item_.id
                         }), 201
                     except Exception:
-                        pass
+                        abort(500)
                 else:
                     return jsonify({
                         'errMsg': 'item exists'
@@ -89,29 +92,38 @@ def cart():
         token = request.args.get('token', '')
         if token:
             user_found = User.get_by_token(token)
-            # cart_items = CartItem.get_by_openid(openid=user_found.openid)
-            cart_items = user_found.cart
-            # logger.info(cart_items)
+            if user_found:  # 根据token查找到用户
+                # cart_items = CartItem.get_by_openid(openid=user_found.openid)
+                cart_items = user_found.cart
+                # logger.info(cart_items)
 
-            cart_list = list()
-            if cart_items:
-                for item in cart_items:
-                    cart_item = dict(cartItemId=item.id,
-                                     bookName=item.post.book_name,
-                                     imageName=item.post.image_name,
-                                     sale=item.post.sale_price,
-                                     author=item.post.book.author,
-                                     publisher=item.post.book.publisher,
-                                     checked=item.is_checked,
-                                     valid=item.post.is_valid)
-                    cart_list.append(cart_item)
+                cart_list = list()
+                if cart_items:
+                    for item in cart_items:
+                        cart_item = dict(cartItemId=item.id,
+                                         bookName=item.post.book_name,
+                                         imageName=item.post.image_name,
+                                         sale=item.post.sale_price,
+                                         new=item.post.new,
+                                         addr=item.post.seller.dorm,
+                                         author=item.post.book.author,
+                                         publisher=item.post.book.publisher,
+                                         pubdate=item.post.book.pubdate,
+                                         originalPrice=item.post.book.original_price,
+                                         checked=item.is_checked,
+                                         valid=item.post.is_valid)
+                        cart_list.append(cart_item)
 
+                    return jsonify({
+                        'msg': 'request:ok',
+                        'cartList': cart_list
+                    })
+                else:
+                    abort(404)
+            else:   # token过期(多端登录)或用户不存在(bug)
                 return jsonify({
-                    'msg': 'request:ok',
-                    'cartList': cart_list
-                })
-            else:
-                abort(404)
+                    'errMsg': 'overdue token'
+                }), 403
         else:
             return jsonify({
                 'errMsg': 'need token'

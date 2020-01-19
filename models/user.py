@@ -6,7 +6,8 @@ class User(db.Model):
     __tablename__ = 'user'
     openid = db.Column(db.String(128), primary_key=True)
     name = db.Column(db.String(16), nullable=False)
-    student_id = db.Column(db.String(16), nullable=False, unique=True)
+    student_id = db.Column(db.String(16), nullable=False)
+    major = db.Column(db.String(64))
     dorm = db.Column(db.String(16), nullable=False)
     money_paid = db.Column(db.Integer, nullable=False)
     money_earned = db.Column(db.Integer, nullable=False)
@@ -16,10 +17,11 @@ class User(db.Model):
     # posts = db.relationship('Post', backref='user', lazy='dynamic')
     # cart_items = db.relationship('CartItem', backref='user')
 
-    def __init__(self, openid, name='无', student_id='none', dorm='none', token=''):
+    def __init__(self, openid, name='无', student_id='none', major='none', dorm='none', token=''):
         self.openid = openid
         self.name = name
         self.student_id = student_id
+        self.major = major
         self.dorm = dorm
         self.money_paid = 0
         self.money_earned = 0
