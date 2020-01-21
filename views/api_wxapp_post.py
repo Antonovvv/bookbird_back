@@ -15,7 +15,6 @@ app = Blueprint('api_wxapp_post', __name__, url_prefix='/api/mp/post')
 
 AK = 'aboRN3j_k6sYgU-JQWJNjecp_wU56tA24c1EN0eQ'
 SK = 'TReUVW1XcEkJC3XSGwOkrYZbB6u-uukJQ-frliZM'
-
 q = Auth(AK, SK)
 bucket_name = 'bookbird'
 
@@ -35,7 +34,7 @@ def post():
         book_found = Book.get_by_isbn(isbn)
         if not book_found:
             return jsonify({
-                'errMsg': 'invalid isbn'
+                'errMsg': 'Invalid isbn'
             }), 404
         else:
             post_ = Post(bookname=bookname, price=price, new=new, description=description,
@@ -72,7 +71,7 @@ def post():
                 search_list.append(search_item)
 
             return jsonify({
-                'msg': 'request:ok',
+                'msg': 'Request: ok',
                 'searchRes': search_list
             })
         else:

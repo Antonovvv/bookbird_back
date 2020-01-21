@@ -37,7 +37,7 @@ def user_login():
             except Exception:
                 logger.info('fail: ' + openid + token)
                 return jsonify({
-                    'errMsg': 'new user fail'
+                    'errMsg': 'Fail to add new user'
                 }), 500
         else:
             if token == user_found.token:   # session_key未过期
@@ -77,15 +77,15 @@ def cart():
                         abort(500)
                 else:
                     return jsonify({
-                        'errMsg': 'item exists'
+                        'errMsg': 'Item exists'
                     }), 403
             else:
                 return jsonify({
-                    'errMsg': 'user not found'
+                    'errMsg': 'User not found'
                 }), 404
         else:
             return jsonify({
-                'errMsg': 'need params'
+                'errMsg': 'Need params'
             }), 404
 
     elif request.method == 'GET':
@@ -115,18 +115,18 @@ def cart():
                         cart_list.append(cart_item)
 
                     return jsonify({
-                        'msg': 'request:ok',
+                        'msg': 'Request: ok',
                         'cartList': cart_list
                     })
                 else:
                     abort(404)
             else:   # token过期(多端登录)或用户不存在(bug)
                 return jsonify({
-                    'errMsg': 'overdue token'
+                    'errMsg': 'Overdue token'
                 }), 403
         else:
             return jsonify({
-                'errMsg': 'need token'
+                'errMsg': 'Need token'
             })
 
     elif request.method == 'DELETE':
@@ -140,13 +140,13 @@ def cart():
                     db.session.delete(cart_item)
                     db.session.commit()
                 return jsonify({
-                    'msg': 'delete:ok'
+                    'msg': 'Delete: ok'
                 })
             except Exception:
                 abort(500)
         else:
             return jsonify({
-                'errMsg': 'need id'
+                'errMsg': 'Need id'
             }), 404
 
 
@@ -164,11 +164,11 @@ def user():
             db.session.commit()
 
             return jsonify({
-                'status': 'new'
+                'status': 'New'
             })
         else:
             return jsonify({
-                'status': 'exists'
+                'status': 'Exists'
             })
 
     return 'else'

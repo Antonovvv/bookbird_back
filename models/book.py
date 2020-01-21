@@ -28,5 +28,9 @@ class Book(db.Model):
         return cls.query.filter_by(isbn=isbn).first()
 
     @classmethod
+    def search_by_name(cls, name):
+        return cls.query.filter(cls.book_name.like('%' + name + '%')).all() if name else None
+
+    @classmethod
     def get_posts(cls, isbn):
         return cls.query.filter_by(isbn=isbn).first().posts
