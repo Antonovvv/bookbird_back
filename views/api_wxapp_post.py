@@ -63,7 +63,7 @@ def post():
                                    postTime=item.post_time,
                                    sale=item.sale_price,
                                    new=item.new,
-                                   addr=item.seller.dorm,
+                                   addr=item.seller.address,
                                    author=item.book.author,
                                    publisher=item.book.publisher,
                                    pubdate=item.book.pubdate,

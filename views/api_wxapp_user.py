@@ -2,6 +2,7 @@
 from flask import Blueprint, request, jsonify, abort
 import requests
 import hashlib
+from qiniu import Auth
 
 from app import mp_client
 from models import Book, Post, User, CartItem
@@ -11,6 +12,12 @@ from utils import *
 from config import *
 
 app = Blueprint('api_wxapp_user', __name__, url_prefix='/api/mp/user')
+
+AK = 'aboRN3j_k6sYgU-JQWJNjecp_wU56tA24c1EN0eQ'
+SK = 'TReUVW1XcEkJC3XSGwOkrYZbB6u-uukJQ-frliZM'
+q = Auth(AK, SK)
+bucket_name = 'bookbird-card'
+bucket_url = 'q4t4ac92e.bkt.clouddn.com/'
 
 
 @app.route('/login', methods=['GET'])
@@ -32,7 +39,8 @@ def user_login():
                 db.session.add(user_)
                 db.session.commit()
                 return jsonify({
-                    'token': token
+                    'token': token,
+                    'isAuthorized': False
                 }), 201
             except Exception:
                 logger.info('fail: ' + openid + token)
@@ -50,7 +58,8 @@ def user_login():
                 except Exception:
                     pass
             return jsonify({
-                'token': token
+                'token': token,
+                'isAuthorized': user_found.is_authorized
             })
     else:
         return 'invalid code', 404
@@ -105,7 +114,7 @@ def cart():
                                          imageName=item.post.image_name,
                                          sale=item.post.sale_price,
                                          new=item.post.new,
-                                         addr=item.post.seller.dorm,
+                                         addr=item.post.seller.address,
                                          author=item.post.book.author,
                                          publisher=item.post.book.publisher,
                                          pubdate=item.post.book.pubdate,
@@ -119,7 +128,9 @@ def cart():
                         'cartList': cart_list
                     })
                 else:
-                    abort(404)
+                    return jsonify({
+                        'msg': 'Request: ok'
+                    }), 204
             else:   # token过期(多端登录)或用户不存在(bug)
                 return jsonify({
                     'errMsg': 'Overdue token'
@@ -130,45 +141,90 @@ def cart():
             })
 
     elif request.method == 'DELETE':
+        token = request.form.get('token', '')
         delete_list = request.form['deleteList'].split(',')     # 参数为字符串，拆分得到字符数组，逐个转为int
         # logger.info(delete_list)
         if delete_list:
-            # noinspection PyBroadException
-            try:
-                for item_id in delete_list:
-                    cart_item = CartItem.get_by_id(item_id=int(item_id))
-                    db.session.delete(cart_item)
-                    db.session.commit()
-                return jsonify({
-                    'msg': 'Delete: ok'
-                })
-            except Exception:
-                abort(500)
+            for item_id in delete_list:
+                cart_item = CartItem.get_by_id(item_id=int(item_id))
+                if cart_item:
+                    if token == cart_item.user.token:
+                        # noinspection PyBroadException
+                        try:
+                            db.session.delete(cart_item)
+                            db.session.commit()
+                            return jsonify({
+                                'msg': 'Delete: ok'
+                            })
+                        except Exception:
+                            abort(500)
+                    else:
+                        return jsonify({
+                            'errMsg': 'Invalid token'
+                        }), 403
+                else:
+                    return jsonify({
+                        'errMsg': 'CartItem not found'
+                    }), 404
         else:
             return jsonify({
-                'errMsg': 'Need id'
-            }), 404
+                'errMsg': 'Need cart item id'
+            }), 400
 
 
-@app.route('/', methods=['GET', 'POST', 'PUT'])
+@app.route('', methods=['GET', 'PUT'])
 def user():
-    if request.method == 'POST':
-        openid = request.form['openid']
-        name = request.form['name']
-        student_id = request.form['studentId']
-        dorm = request.form['dorm']
+    if request.method == 'PUT':
+        token = request.form.get('token')
+        name = request.form.get('myName', '')
+        student_id = request.form.get('studentId', '')
+        address = request.form.get('address', '')
 
-        if not User.get_by_openid(openid):
-            user_ = User(openid=openid, name=name, student_id=student_id, dorm=dorm)
-            db.session.add(user_)
-            db.session.commit()
+        user_found = User.get_by_token(token)
+        if user_found:
+            if name and student_id and address:
+                card_image_name = uuid.uuid4().hex
+                card_image_url = bucket_url + card_image_name
+                # noinspection PyBroadException
+                try:
+                    user_found.name = name
+                    user_found.student_id = student_id
+                    user_found.address = address
+                    user_found.card_image_url = card_image_url
+                    user_found.is_authorized = True
+                    db.session.commit()
 
-            return jsonify({
-                'status': 'New'
-            })
+                    up_token = q.upload_token(bucket_name, card_image_name, 3600)
+                    return jsonify({
+                        'upToken': up_token,
+                        'key': card_image_name
+                    })
+                except Exception:
+                    abort(500)
+            else:
+                return jsonify({
+                    'errMsg': 'Full information required'
+                }), 400
         else:
             return jsonify({
-                'status': 'Exists'
-            })
-
-    return 'else'
+                'errMsg': 'Overdue token'
+            }), 403
+    elif request.method == 'GET':
+        token = request.args.get('token', '')
+        user_found = User.get_by_token(token)
+        if user_found:
+            if user_found.is_authorized:
+                return jsonify({
+                    'myName': user_found.name,
+                    'studentId': user_found.student_id,
+                    'address': user_found.address,
+                    'cardImageUrl': user_found.card_image_url
+                })
+            else:
+                return jsonify({
+                    'msg': 'Not authorized'
+                }), 204
+        else:
+            return jsonify({
+                'errMsg': 'Overdue token'
+            }), 403
