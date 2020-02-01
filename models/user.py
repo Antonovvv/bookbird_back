@@ -37,3 +37,7 @@ class User(db.Model):
     @classmethod
     def get_by_token(cls, token):
         return cls.query.filter_by(token=token).first()
+
+    @classmethod
+    def get_all(cls):
+        return cls.query.all()

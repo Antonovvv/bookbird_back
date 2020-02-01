@@ -10,7 +10,7 @@ from config import *
 
 app = Blueprint('api_wxapp_book', __name__, url_prefix='/api/mp/book')
 
-url_isbn = 'https://douban.uieee.com/v2/book/isbn/'
+url_isbn = 'http://douban.uieee.com/v2/book/isbn/'
 headers = {
     'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 \
                   (KHTML, like Gecko) Chrome/79.0.3945.88 Mobile Safari/537.36'

@@ -44,10 +44,10 @@ def post():
             today = int(now / (24 * 3600))
             # noinspection PyBroadException
             try:
-                conn_book.zincrby('post_' + str(today), 1, book_name)   # 计入当日上传
-                conn_book.zincrby('rank_' + str(today), 1, book_name)   # 计入当日推荐
+                conn_book.zincrby('daily_' + str(today), 2, book_name)   # 计入当日上传
+                conn_book.zincrby('rank_' + str(today), 2, book_name)   # 计入当日推荐
                 current_count = conn_book.zscore('rank_' + str(today), book_name)
-                sub_count = conn_book.zscore('post_' + str(today - 7), book_name)  # 7天前的即将淘汰
+                sub_count = conn_book.zscore('daily_' + str(today - 7), book_name)  # 7天前的即将淘汰
                 if sub_count:
                     conn_book.zadd('rank_' + str(today + 1), {book_name: current_count - sub_count})  # 当前榜减去即将淘汰日写入明日榜
                 else:
@@ -94,10 +94,10 @@ def post():
             for name in search_names:
                 # noinspection PyBroadException
                 try:
-                    conn_book.zincrby('search_' + str(today), 1, name)  # 计入当日搜索
+                    conn_book.zincrby('daily_' + str(today), 1, name)  # 计入当日搜索
                     conn_book.zincrby('rank_' + str(today), 1, name)    # 计入当日推荐
                     current_count = conn_book.zscore('rank_' + str(today), name)
-                    sub_count = conn_book.zscore('search_' + str(today - 7), name)  # 7天前的即将淘汰
+                    sub_count = conn_book.zscore('daily_' + str(today - 7), name)  # 7天前的即将淘汰
                     if sub_count:
                         conn_book.zadd('rank_' + str(today + 1), {name: current_count - sub_count})  # 当前榜减去即将淘汰日写入明日榜
                     else:
@@ -120,7 +120,7 @@ def try_search():
     now = int(time.time())
     today = int(now / (24 * 3600))
     top_list = list()
-    for book_name in conn_book.zrevrangebyscore('rank_' + str(today), max=999999, min=0, start=0, num=count):
+    for book_name in conn_book.zrevrangebyscore('rank_' + str(today), max=999999, min=1, start=0, num=count):
         top_list.append(book_name.decode())
     return jsonify({
         'tryList': top_list

@@ -80,13 +80,9 @@ def register():
                         'msg': 'Register: ok'
                     }), 201
                 except Exception:
-                    return jsonify({
-                        'errMsg': 'Fail to sign in'
-                    }), 500
+                    return jsonify({'errMsg': 'Fail to sign in'}), 500
             else:
-                return jsonify({
-                    'errMsg': 'Username exists'
-                }), 403
+                return jsonify({'errMsg': 'Username exists'}), 403
         else:
             if 6 <= len(_username) <= 25 and len(_password) >= 8 and _confirm == _password:
                 admin_found = Admin.get_by_username(_username)
@@ -101,17 +97,11 @@ def register():
                             'warn': 'Please observe API document'
                         }), 201
                     except Exception:
-                        return jsonify({
-                            'errMsg': 'Fail to sign in'
-                        }), 500
+                        return jsonify({'errMsg': 'Fail to sign in'}), 500
                 else:
-                    return jsonify({
-                        'errMsg': 'Username exists'
-                    }), 403
+                    return jsonify({'errMsg': 'Username exists'}), 403
             else:
-                return jsonify({
-                    'errMsg': 'Bad params'
-                }), 400
+                return jsonify({'errMsg': 'Bad params'}), 400
 
 
 @app.route('/login', methods=['POST'])
@@ -125,60 +115,86 @@ def login():
             if admin_found and admin_found.verify_password(form.password.data):
                 token = create_token(admin_found.username)
                 session['token'] = token
-                return jsonify({
-                    'msg': 'Login: ok'
-                })
+                return jsonify({'msg': 'Login: ok'})
             else:
-                return jsonify({
-                    'errMsg': 'Wrong username or password'
-                }), 403
+                return jsonify({'errMsg': 'Wrong username or password'}), 403
         else:
             if 6 <= len(_username) <= 25 and len(_password) >= 8:
                 admin_found = Admin.get_by_username(_username)
                 if admin_found and admin_found.verify_password(_password):
                     token = create_token(admin_found.username)
                     session['token'] = token
-                    return jsonify({
-                        'msg': 'Login: ok'
-                    })
+                    return jsonify({'msg': 'Login: ok'})
                 else:
-                    return jsonify({
-                        'errMsg': 'Wrong username or password'
-                    }), 403
+                    return jsonify({'errMsg': 'Wrong username or password'}), 403
             else:
-                return jsonify({
-                    'errMsg': 'Invalid username or password'
-                }), 400
+                return jsonify({'errMsg': 'Invalid username or password'}), 400
 
 
 @app.route('/book', methods=['GET'])
 def book():
-    name = request.args.get('name')
-    if name:
-        books = Book.search_by_name(name)
-        search_list = list()
-        if books:
-            for item in books:
-                search_item = dict(isbn=item.isbn,
-                                   name=item.book_name,
-                                   imageUrl=item.image_url,
-                                   author=item.author,
-                                   publisher=item.publisher,
-                                   pubdate=item.pubdate,
-                                   originalPrice=item.original_price)
-                search_list.append(search_item)
-            return jsonify({
-                'msg': 'Request: ok',
-                'bookList': search_list
-            })
-        else:
-            abort(404)
+    token = session.get('token')
+    if not token:
+        return jsonify({'errMsg': 'Did not login'}), 403
     else:
-        return jsonify({
-            'errMsg': 'Need params'
-        }), 400
+        username = verify_token(token)
+        if username:
+            name = request.args.get('name')
+            if name:
+                books = Book.search_by_name(name)
+                search_list = list()
+                if books:
+                    for item in books:
+                        search_item = dict(isbn=item.isbn,
+                                           name=item.book_name,
+                                           imageUrl=item.image_url,
+                                           author=item.author,
+                                           publisher=item.publisher,
+                                           pubdate=item.pubdate,
+                                           originalPrice=item.original_price)
+                        search_list.append(search_item)
+                    return jsonify({
+                        'msg': 'Request: ok',
+                        'bookList': search_list
+                    })
+                else:
+                    abort(404)
+            else:
+                return jsonify({'errMsg': 'Need params'}), 400
+        else:
+            return jsonify({'errMsg': 'Invalid token'}), 403
 
 
 @app.route('/book/isbn/<isbn>', methods=['GET'])
 def isbn(isbn):
     pass
+
+
+@app.route('/user', methods=['GET'])
+def user():
+    token = session.get('token')
+    if token:
+        username = verify_token(token)
+        if username:
+            users = User.get_all()
+            user_list = list()
+            if users:
+                for user in users:
+                    if user.is_authorized:
+                        item = dict(name=user.name,
+                                    studentId=user.student_id,
+                                    address=user.address,
+                                    cardImageUrl=user.card_image_url,
+                                    isAuthorized=user.is_authorized)
+                        user_list.append(item)
+                return jsonify({
+                    'msg': 'Request: ok',
+                    'userList': user_list
+                })
+            else:
+                abort(404)
+        else:
+            return jsonify({'errMsg': 'Invalid token'}), 403
+    else:
+        return jsonify({'errMsg': 'Did not login'}), 403
+
