@@ -17,7 +17,7 @@ AK = 'aboRN3j_k6sYgU-JQWJNjecp_wU56tA24c1EN0eQ'
 SK = 'TReUVW1XcEkJC3XSGwOkrYZbB6u-uukJQ-frliZM'
 q = Auth(AK, SK)
 bucket_name = 'bookbird-card'
-bucket_url = 'q4t4ac92e.bkt.clouddn.com/'
+bucket_url = 'http://imgs.bookbird.cn/'
 
 
 @app.route('/login', methods=['GET'])
@@ -44,9 +44,7 @@ def user_login():
                 }), 201
             except Exception:
                 logger.info('fail: ' + openid + token)
-                return jsonify({
-                    'errMsg': 'Fail to add new user'
-                }), 500
+                return jsonify({'errMsg': 'Fail to add new user'}), 500
         else:
             if token == user_found.token:   # session_key未过期
                 pass
@@ -85,17 +83,11 @@ def cart():
                     except Exception:
                         abort(500)
                 else:
-                    return jsonify({
-                        'errMsg': 'Item exists'
-                    }), 403
+                    return jsonify({'errMsg': 'Item exists'}), 403
             else:
-                return jsonify({
-                    'errMsg': 'User not found'
-                }), 404
+                return jsonify({'errMsg': 'User not found'}), 404
         else:
-            return jsonify({
-                'errMsg': 'Need params'
-            }), 404
+            return jsonify({'errMsg': 'Need params'}), 404
 
     elif request.method == 'GET':
         token = request.args.get('token', '')
@@ -128,17 +120,11 @@ def cart():
                         'cartList': cart_list
                     })
                 else:
-                    return jsonify({
-                        'msg': 'Request: ok'
-                    }), 204
+                    return jsonify({'msg': 'Request: ok'}), 204
             else:   # token过期(多端登录)或用户不存在(bug)
-                return jsonify({
-                    'errMsg': 'Overdue token'
-                }), 403
+                return jsonify({'errMsg': 'Overdue token'}), 403
         else:
-            return jsonify({
-                'errMsg': 'Need token'
-            })
+            return jsonify({'errMsg': 'Need token'})
 
     elif request.method == 'DELETE':
         token = request.form.get('token', '')
@@ -153,23 +139,15 @@ def cart():
                         try:
                             db.session.delete(cart_item)
                             db.session.commit()
-                            return jsonify({
-                                'msg': 'Delete: ok'
-                            })
+                            return jsonify({'msg': 'Delete: ok'})
                         except Exception:
                             abort(500)
                     else:
-                        return jsonify({
-                            'errMsg': 'Invalid token'
-                        }), 403
+                        return jsonify({'errMsg': 'Invalid token'}), 403
                 else:
-                    return jsonify({
-                        'errMsg': 'CartItem not found'
-                    }), 404
+                    return jsonify({'errMsg': 'CartItem not found'}), 404
         else:
-            return jsonify({
-                'errMsg': 'Need cart item id'
-            }), 400
+            return jsonify({'errMsg': 'Need cart item id'}), 400
 
 
 @app.route('', methods=['GET', 'PUT'])
@@ -202,13 +180,9 @@ def user():
                 except Exception:
                     abort(500)
             else:
-                return jsonify({
-                    'errMsg': 'Full information required'
-                }), 400
+                return jsonify({'errMsg': 'Full information required'}), 400
         else:
-            return jsonify({
-                'errMsg': 'Overdue token'
-            }), 403
+            return jsonify({'errMsg': 'Overdue token'}), 403
     elif request.method == 'GET':
         token = request.args.get('token', '')
         user_found = User.get_by_token(token)
@@ -221,10 +195,6 @@ def user():
                     'cardImageUrl': user_found.card_image_url
                 })
             else:
-                return jsonify({
-                    'msg': 'Not authorized'
-                }), 204
+                return jsonify({'msg': 'Not authorized'}), 204
         else:
-            return jsonify({
-                'errMsg': 'Overdue token'
-            }), 403
+            return jsonify({'errMsg': 'Overdue token'}), 403

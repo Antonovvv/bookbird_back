@@ -61,6 +61,14 @@ def verify_token(token):
     return data['username']
 
 
+@app.after_request
+def after_request(response):
+    response.headers['Access-Control-Allow-Origin'] = 'http://127.0.0.1:5500'
+    response.headers['Access-Control-Allow-Method'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    return response
+
+
 @app.route('/register', methods=['POST'])
 def register():
     _username = request.form.get('username', '')

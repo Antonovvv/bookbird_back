@@ -125,3 +125,30 @@ def try_search():
     return jsonify({
         'tryList': top_list
     })
+
+
+@app.route('look', methods=['GET'])
+def look():
+    count = request.args.get('count', 0)
+    look_posts = Post.get_random(count)
+    look_list = list()
+    if look_posts:
+        for item in look_posts:
+            look_item = dict(postId=item.id,
+                             bookName=item.book_name,
+                             imageName=item.image_name,
+                             postTime=item.post_time,
+                             sale=item.sale_price,
+                             new=item.new,
+                             addr=item.seller.address,
+                             author=item.book.author,
+                             publisher=item.book.publisher,
+                             pubdate=item.book.pubdate,
+                             originalPrice=item.book.original_price)
+            look_list.append(look_item)
+        return jsonify({
+            'msg': 'Request: ok',
+            'lookList': look_list
+        })
+    else:
+        abort(404)

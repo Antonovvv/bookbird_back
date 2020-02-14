@@ -31,5 +31,6 @@ def new_rank():
 
 if __name__ == "__main__":
     scheduler = BackgroundScheduler()
-    scheduler.add_job(new_rank, 'cron', hour=23, minute=29)
+    scheduler.add_job(new_rank, 'interval', days=1)
     scheduler.start()
+    new_rank()

@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 import uuid
 from datetime import datetime
+from sqlalchemy.sql.expression import func
 
 from ext import database as db
 from utils import *
@@ -43,3 +44,7 @@ class Post(db.Model):
     @classmethod
     def search_by_name(cls, name):
         return cls.query.filter(cls.book_name.like('%' + name + '%')).all() if name else None
+
+    @classmethod
+    def get_random(cls, count):
+        return cls.query.order_by(func.random()).limit(count).all()
