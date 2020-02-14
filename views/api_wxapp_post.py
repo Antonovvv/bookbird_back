@@ -76,20 +76,21 @@ def post():
             today = int(now / (24 * 3600))
             search_names = set()
             for item in posts:
-                search_names.add(item.book_name)    # 搜索得到的卖单书名，同名不重复计入
-                # logger.info(item.book_name)
-                search_item = dict(postId=item.id,
-                                   bookName=item.book_name,
-                                   imageName=item.image_name,
-                                   postTime=item.post_time,
-                                   sale=item.sale_price,
-                                   new=item.new,
-                                   addr=item.seller.address,
-                                   author=item.book.author,
-                                   publisher=item.book.publisher,
-                                   pubdate=item.book.pubdate,
-                                   originalPrice=item.book.original_price)
-                search_list.append(search_item)
+                if item.is_valid:
+                    search_names.add(item.book_name)    # 搜索得到的卖单书名，同名不重复计入
+                    # logger.info(item.book_name)
+                    search_item = dict(postId=item.id,
+                                       bookName=item.book_name,
+                                       imageName=item.image_name,
+                                       postTime=item.post_time,
+                                       sale=item.sale_price,
+                                       new=item.new,
+                                       addr=item.seller.address,
+                                       author=item.book.author,
+                                       publisher=item.book.publisher,
+                                       pubdate=item.book.pubdate,
+                                       originalPrice=item.book.original_price)
+                    search_list.append(search_item)
 
             for name in search_names:
                 # noinspection PyBroadException
@@ -110,7 +111,7 @@ def post():
                 'searchRes': search_list
             })
         else:
-            abort(404)
+            abort(204)
     return 'else'
 
 

@@ -38,12 +38,20 @@ class Post(db.Model):
         self.is_valid = True
 
     @classmethod
+    def get_by_id(cls, id):
+        return cls.query.filter_by(id=id).first()
+
+    @classmethod
     def get_by_isbn(cls, isbn):
         return cls.query.filter_by(book_isbn=isbn).all()
 
     @classmethod
     def search_by_name(cls, name):
         return cls.query.filter(cls.book_name.like('%' + name + '%')).all() if name else None
+
+    @classmethod
+    def get_by_user(cls, openid, count):
+        return cls.query.filter_by(seller_openid=openid).limit(count).all()
 
     @classmethod
     def get_random(cls, count):

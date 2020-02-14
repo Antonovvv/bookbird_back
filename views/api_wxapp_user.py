@@ -63,13 +63,66 @@ def user_login():
         return 'invalid code', 404
 
 
+@app.route('/posts', methods=['GET', 'DELETE'])
+def posts():
+    if request.method == 'GET':
+        token = request.args.get('token', '')
+        count = request.args.get('count', 0)
+        if token:
+            user_found = User.get_by_token(token)
+            if user_found:
+                posts = Post.get_by_user(openid=user_found.openid, count=count)
+                post_list = list()
+                if posts:
+                    for item in posts:
+                        if item.is_valid:
+                            post_item = dict(postId=item.id,
+                                             bookName=item.book_name,
+                                             imageName=item.image_name,
+                                             sale=item.sale_price,
+                                             new=item.new,
+                                             addr=item.seller.address,
+                                             author=item.book.author,
+                                             publisher=item.book.publisher,
+                                             pubdate=item.book.pubdate,
+                                             originalPrice=item.book.original_price)
+                            post_list.append(post_item)
+                    return jsonify({
+                        'msg': 'Request: ok',
+                        'postList': post_list
+                    })
+                else:
+                    return jsonify({'msg': 'Request: ok'}), 204
+            else:
+                return jsonify({'errMsg': 'Overdue token'}), 403
+        else:
+            return jsonify({'errMsg': 'Need token'}), 400
+    elif request.method == 'DELETE':
+        token = request.form.get('token', '')
+        delete_id = request.form.get('deleteId', '')
+        if delete_id:
+            post_found = Post.get_by_id(id=delete_id)
+            if token == post_found.seller.token:
+                # noinspection PyBroadException
+                try:
+                    post_found.is_valid = False
+                    db.session.commit()
+                    return jsonify({'msg': 'Delete: ok'})
+                except Exception:
+                    abort(500)
+            else:
+                return jsonify({'errMsg': 'Invalid token'}), 403
+        else:
+            return jsonify({'errMsg': 'Need id'}), 400
+
+
 @app.route('/cart', methods=['GET', 'POST', 'DELETE'])
 def cart():
     if request.method == 'POST':
         token = request.form['token']
-        post_id = int(request.form['postId'])
+        post_id = int(request.form['postId'])   # 参数为字符，转为int
         if token and post_id:
-            user_found = User.get_by_token(token)   # 参数为字符，转为int
+            user_found = User.get_by_token(token)
             if user_found:
                 if post_id not in [item.post_id for item in user_found.cart]:
                     # noinspection PyBroadException
@@ -124,7 +177,7 @@ def cart():
             else:   # token过期(多端登录)或用户不存在(bug)
                 return jsonify({'errMsg': 'Overdue token'}), 403
         else:
-            return jsonify({'errMsg': 'Need token'})
+            return jsonify({'errMsg': 'Need token'}), 400
 
     elif request.method == 'DELETE':
         token = request.form.get('token', '')
@@ -145,7 +198,7 @@ def cart():
                     else:
                         return jsonify({'errMsg': 'Invalid token'}), 403
                 else:
-                    return jsonify({'errMsg': 'CartItem not found'}), 404
+                    return jsonify({'errMsg': 'CartItem not found'}), 204
         else:
             return jsonify({'errMsg': 'Need cart item id'}), 400
 
