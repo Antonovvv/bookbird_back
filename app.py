@@ -26,6 +26,7 @@ blueprints = [
     'views.api_wxapp_book:app',
     'views.api_wxapp_post:app',
     'views.api_wxapp_user:app',
+    'views.api_wxapp_order:app',
     'views.api_admin:app'
 ]
 for bp_name in blueprints:

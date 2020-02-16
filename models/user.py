@@ -20,7 +20,7 @@ class User(db.Model):
     # posts = db.relationship('Post', backref='user', lazy='dynamic')
     # cart_items = db.relationship('CartItem', backref='user')
 
-    def __init__(self, openid, name='无', student_id='none', address='none', token=''):
+    def __init__(self, openid, name='无', student_id='none', address='none', token='none'):
         self.openid = openid
         self.is_authorized = False
         self.name = name

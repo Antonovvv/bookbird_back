@@ -5,7 +5,7 @@ import hashlib
 from qiniu import Auth
 
 from app import mp_client
-from models import Book, Post, User, CartItem
+from models import Book, Post, User, CartItem, Order
 from ext import database as db
 from ext import logger
 from utils import *
@@ -116,6 +116,91 @@ def posts():
             return jsonify({'errMsg': 'Need id'}), 400
 
 
+@app.route('/orders', methods=['GET', 'DELETE'])
+def order():
+    if request.method == 'GET':
+        token = request.args.get('token', '')
+        order_type = request.args.get('orderType', '')
+        user_found = User.get_by_token(token)
+        if user_found:
+            if order_type == 'bought':
+                orders = Order.get_by_buyer(buyer=user_found.openid)
+            elif order_type == 'sold':
+                orders = Order.get_by_seller(seller=user_found.openid)
+            else:
+                return jsonify({'errMsg': 'Invalid type'}), 400
+            order_list = list()
+            if orders:
+                for item in orders:
+                    if item.is_effective:
+                        order_item = dict(orderId=item.id,
+                                          orderTime=item.deal_time.strftime("%Y-%m-%d %H:%M:%S"),
+                                          bookName=item.post.book_name,
+                                          imageName=item.post.image_name,
+                                          deadline=item.deadline,
+                                          addr=item.post.seller.address,
+                                          sale=item.post.sale_price,
+                                          status=item.status)
+                        order_list.append(order_item)
+                return jsonify({
+                    'msg': 'Request: ok',
+                    'orderList': order_list
+                })
+            else:
+                return jsonify({'msg': 'Request: ok'}), 204
+        else:
+            return jsonify({'errMsg': 'Invalid token'}), 403
+    elif request.method == 'DELETE':
+        token = request.form.get('token', '')
+        order_id = request.form.get('orderId', '')
+        if order_id:
+            order_found = Order.get_by_id(order_id)
+            if token == order_found.buyer.token:
+                # noinspection PyBroadException
+                try:
+                    order_found.is_effective = False
+                    order_found.post.is_valid = True
+                    db.session.commit()
+                    return jsonify({'msg': 'Delete: ok'})
+                except Exception:
+                    abort(500)
+            else:
+                return jsonify({'errMsg': 'Invalid token'}), 403
+        else:
+            return jsonify({'errMsg': 'Need id'}), 400
+
+
+@app.route('/dynamics', methods=['GET'])
+def dynamic():
+    token = request.args.get('token', '')
+    user_found = User.get_by_token(token)
+    if user_found:
+        dynamics = Order.get_dynamics(user=user_found.openid)
+        dynamic_list = list()
+        if dynamics:
+            for item in dynamics:
+                if item.is_effective:
+                    identity = 'buyer' if user_found.openid == item.buyer_openid else 'seller'
+                    dynamic_item = dict(orderId=item.id,
+                                        orderTime=item.deal_time.strftime("%Y-%m-%d %H:%M:%S"),
+                                        bookName=item.post.book_name,
+                                        imageName=item.post.image_name,
+                                        deadline=item.deadline,
+                                        addr=item.post.seller.address,
+                                        sale=item.post.sale_price,
+                                        identity=identity,
+                                        status=item.status)
+                    dynamic_list.append(dynamic_item)
+            return jsonify({
+                'msg': 'Request: ok',
+                'dynamicList': dynamic_list
+            })
+        else:
+            return jsonify({'msg': 'Request: ok'}), 204
+    else:
+        return jsonify({'errMsg': 'Invalid token'}), 403
+
+
 @app.route('/cart', methods=['GET', 'POST', 'DELETE'])
 def cart():
     if request.method == 'POST':
@@ -155,6 +240,7 @@ def cart():
                 if cart_items:
                     for item in cart_items:
                         cart_item = dict(cartItemId=item.id,
+                                         postId=item.post.id,
                                          bookName=item.post.book_name,
                                          imageName=item.post.image_name,
                                          sale=item.post.sale_price,

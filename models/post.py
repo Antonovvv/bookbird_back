@@ -19,7 +19,6 @@ class Post(db.Model):
 
     book_isbn = db.Column(db.String(32), db.ForeignKey('book.isbn'), nullable=False)
     seller_openid = db.Column(db.String(128), db.ForeignKey('user.openid'), nullable=False)
-
     book = db.relationship('Book', backref=db.backref('posts'))
     seller = db.relationship('User', backref=db.backref('posts'))
 
@@ -51,7 +50,7 @@ class Post(db.Model):
 
     @classmethod
     def get_by_user(cls, openid, count):
-        return cls.query.filter_by(seller_openid=openid).limit(count).all()
+        return cls.query.filter_by(seller_openid=openid).order_by(cls.post_time.desc()).limit(count).all()
 
     @classmethod
     def get_random(cls, count):
