@@ -45,7 +45,7 @@ class LoginForm(Form):
 
 
 def create_token(username):
-    s = Serializer(current_app.config['SECRET_KEY'], expires_in=1800)
+    s = Serializer(current_app.config['SECRET_KEY'], expires_in=18000)
     token = s.dumps({
         'username': username
     }).decode("ascii")
@@ -53,7 +53,7 @@ def create_token(username):
 
 
 def verify_token(token):
-    s = Serializer(current_app.config['SECRET_KEY'], expires_in=1800)
+    s = Serializer(current_app.config['SECRET_KEY'], expires_in=18000)
     try:
         data = s.loads(token)
     except BadData:
@@ -63,9 +63,10 @@ def verify_token(token):
 
 @app.after_request
 def after_request(response):
-    response.headers['Access-Control-Allow-Origin'] = 'http://127.0.0.1:5500'
+    response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin')
     response.headers['Access-Control-Allow-Method'] = '*'
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
     return response
 
 

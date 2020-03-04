@@ -140,7 +140,8 @@ def order():
                                           deadline=item.deadline,
                                           addr=item.post.seller.address,
                                           sale=item.post.sale_price,
-                                          status=item.status)
+                                          status=item.status,
+                                          identity='buyer' if order_type == 'bought' else 'seller')
                         order_list.append(order_item)
                 return jsonify({
                     'msg': 'Request: ok',

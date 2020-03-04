@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
+import random
 
 from ext import database as db
 from sqlalchemy import or_
@@ -13,7 +14,7 @@ class Order(db.Model):
     id = db.Column(db.String(32), primary_key=True)
     deal_time = db.Column(db.DateTime, nullable=False)
     deadline = db.Column(db.String(32))
-    status = db.Column(db.SmallInteger, nullable=False)     # 0为已下单/待送，1为已送/待取，2为完成
+    status = db.Column(db.SmallInteger, nullable=False)     # 0为已下单/待支付，1为已送/待取，2为完成
 
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
     post = db.relationship('Post', backref=db.backref('order'))
@@ -24,8 +25,9 @@ class Order(db.Model):
     is_effective = db.Column(db.Boolean, nullable=False)
 
     def __init__(self, deadline, post_id, buyer):
-        self.id = datetime.now().strftime("%Y%m%d%H%M%S")
-        self.deal_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.now = datetime.now()
+        self.id = self.now.strftime("%Y%m%d%H%M%S%f") + str(random.randint(1000, 9999))     # 毫秒时间加4位随机数
+        self.deal_time = self.now.strftime("%Y-%m-%d %H:%M:%S")
         self.deadline = deadline
         self.status = 0
         self.post_id = post_id
