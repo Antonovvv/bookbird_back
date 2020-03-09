@@ -14,7 +14,7 @@ class Post(db.Model):
     image_name = db.Column(db.String(128), nullable=False, unique=True)
     post_time = db.Column(db.DateTime, nullable=False)
     sale_price = db.Column(db.Integer, nullable=False)
-    new = db.Column(db.SmallInteger, nullable=False)
+    new = db.Column(db.SmallInteger, nullable=False)    # 0为五成,1为七成,2为九成,3为全新
     description = db.Column(db.String(1000))
 
     book_isbn = db.Column(db.String(32), db.ForeignKey('book.isbn'), nullable=False)
@@ -22,7 +22,7 @@ class Post(db.Model):
     book = db.relationship('Book', backref=db.backref('posts'))
     seller = db.relationship('User', backref=db.backref('posts'))
 
-    is_valid = db.Column(db.Boolean, nullable=False)
+    is_valid = db.Column(db.Boolean, nullable=False)    # 被下架或被下单则为False
 
     def __init__(self, isbn, openid, bookname='', price=0, new=0, description=''):
         self.book_name = bookname

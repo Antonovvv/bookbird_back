@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 import uuid
 from datetime import datetime, timedelta
+from time import mktime
 import random
 
 from ext import database as db
@@ -12,9 +13,9 @@ from utils import *
 class Order(db.Model):
     __tablename__ = "order"
     id = db.Column(db.String(32), primary_key=True)
-    deal_time = db.Column(db.DateTime, nullable=False)
-    deadline = db.Column(db.String(32))
-    status = db.Column(db.SmallInteger, nullable=False)     # 0为已下单/待支付，1为已送/待取，2为完成
+    deal_time = db.Column(db.DateTime, nullable=False)      # 下单时间
+    deadline = db.Column(db.String(32))                     # 送达时限
+    status = db.Column(db.SmallInteger, nullable=False)     # 0为已下单/待支付,1为已支付/待送,2为已送/待取,3为完成
 
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
     post = db.relationship('Post', backref=db.backref('order'))
@@ -22,7 +23,11 @@ class Order(db.Model):
     buyer_openid = db.Column(db.String(128), db.ForeignKey('user.openid'), nullable=False)
     buyer = db.relationship('User', backref=db.backref('bought_deals'))
 
-    is_effective = db.Column(db.Boolean, nullable=False)
+    prepay_id = db.Column(db.String(64))
+    prepay_timestamp = db.Column(db.Integer)
+    delivery_image_url = db.Column(db.String(128))
+
+    is_effective = db.Column(db.Boolean, nullable=False)    # 取消订单则为False
 
     def __init__(self, deadline, post_id, buyer):
         self.now = datetime.now()
@@ -33,6 +38,19 @@ class Order(db.Model):
         self.post_id = post_id
         self.buyer_openid = buyer
         self.is_effective = True
+
+    @classmethod
+    def create_by_prepay(cls, deadline, post_in, buyer, pay_client):    # post_in为对应的post
+        order = cls(deadline, post_in.id, buyer)
+        prepay_data = pay_client.order.create(
+            trade_type='JSAPI', body='不渴鸟BOOKBIRD-书本',
+            notify_url='https://www.bookbird.cn/api/mp/order/notify',
+            total_fee=post_in.sale_price, user_id=order.buyer_openid,
+            out_trade_no=order.id, time_start=order.now, time_expire=order.now + timedelta(hours=2))
+        order.prepay_id = prepay_data['prepay_id']
+        order.prepay_timestamp = mktime(order.now.timetuple())
+
+        return order
 
     @classmethod
     def get_by_id(cls, order_id):

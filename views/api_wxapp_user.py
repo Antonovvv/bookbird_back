@@ -156,17 +156,20 @@ def order():
         order_id = request.form.get('orderId', '')
         if order_id:
             order_found = Order.get_by_id(order_id)
-            if token == order_found.buyer.token:
-                # noinspection PyBroadException
-                try:
-                    order_found.is_effective = False
-                    order_found.post.is_valid = True
-                    db.session.commit()
-                    return jsonify({'msg': 'Delete: ok'})
-                except Exception:
-                    abort(500)
+            if order_found:
+                if token == order_found.buyer.token:
+                    # noinspection PyBroadException
+                    try:
+                        order_found.is_effective = False
+                        order_found.post.is_valid = True
+                        db.session.commit()
+                        return jsonify({'msg': 'Delete: ok'})
+                    except Exception:
+                        abort(500)
+                else:
+                    return jsonify({'errMsg': 'Invalid token'}), 403
             else:
-                return jsonify({'errMsg': 'Invalid token'}), 403
+                return jsonify({'errMsg': 'Invalid orderId'}), 404
         else:
             return jsonify({'errMsg': 'Need id'}), 400
 

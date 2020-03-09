@@ -27,7 +27,8 @@ blueprints = [
     'views.api_wxapp_post:app',
     'views.api_wxapp_user:app',
     'views.api_wxapp_order:app',
-    'views.api_admin:app'
+    'views.api_admin:app',
+    'views.public:app'  # 公众号接口
 ]
 for bp_name in blueprints:
     bp = import_string(bp_name)
@@ -37,21 +38,6 @@ for bp_name in blueprints:
 @app.route('/')
 def root():
     return 'Not Found'
-
-
-# 公众号接口
-@app.route('/wx', methods=['GET', 'POST'])
-def public():
-    signature = request.args.get('signature', '')
-    timestamp = request.args.get('timestamp', '')
-    nonce = request.args.get('nonce', '')
-    if request.method == 'GET':
-        try:
-            check_signature(TOKEN, signature, timestamp, nonce)
-        except InvalidSignatureException:
-            abort(403)
-        echo_str = request.args.get('echostr', '')
-        return echo_str
 
 
 if __name__ == '__main__':
