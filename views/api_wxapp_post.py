@@ -16,8 +16,6 @@ app = Blueprint('api_wxapp_post', __name__, url_prefix='/api/mp/post')
 
 conn_book = redis.Redis(connection_pool=pool_book)
 
-AK = 'aboRN3j_k6sYgU-JQWJNjecp_wU56tA24c1EN0eQ'
-SK = 'TReUVW1XcEkJC3XSGwOkrYZbB6u-uukJQ-frliZM'
 q = Auth(AK, SK)
 bucket_name = 'bookbird'
 

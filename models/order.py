@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 import uuid
 from datetime import datetime, timedelta
-from time import mktime
+from time import mktime, time
 import random
 
 from ext import database as db
@@ -41,6 +41,15 @@ class Order(db.Model):
 
     @classmethod
     def create_by_prepay(cls, deadline, post_in, buyer, pay_client):    # post_in为对应的post
+        """
+        创建订单的同时发起预支付
+        :param deadline: 送达截至时间
+        :param post_in: 书本post实例
+        :param buyer: 买方openid
+        :param pay_client: WeChatPay对象
+
+        :return order数据表对象
+        """
         order = cls(deadline, post_in.id, buyer)
         prepay_data = pay_client.order.create(
             trade_type='JSAPI', body='不渴鸟BOOKBIRD-书本',
@@ -48,9 +57,18 @@ class Order(db.Model):
             total_fee=post_in.sale_price, user_id=order.buyer_openid,
             out_trade_no=order.id, time_start=order.now, time_expire=order.now + timedelta(hours=2))
         order.prepay_id = prepay_data['prepay_id']
-        order.prepay_timestamp = mktime(order.now.timetuple())
-
+        order.prepay_timestamp = int(mktime(order.now.timetuple()))
         return order
+
+    def get_prepay_remain_time(self):
+        """获取预支付订单剩余支付时间"""
+        remain = 900 - int(time()) + self.prepay_timestamp
+        return remain if remain > 0 else 0
+
+    def cancel(self):
+        """关闭订单事务"""
+        self.is_effective = False
+        self.post.is_valid = True   # 恢复post
 
     @classmethod
     def get_by_id(cls, order_id):

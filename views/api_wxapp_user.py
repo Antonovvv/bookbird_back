@@ -13,8 +13,6 @@ from config import *
 
 app = Blueprint('api_wxapp_user', __name__, url_prefix='/api/mp/user')
 
-AK = 'aboRN3j_k6sYgU-JQWJNjecp_wU56tA24c1EN0eQ'
-SK = 'TReUVW1XcEkJC3XSGwOkrYZbB6u-uukJQ-frliZM'
 q = Auth(AK, SK)
 bucket_name = 'bookbird-card'
 bucket_url = 'http://imgs.bookbird.cn/'
@@ -132,17 +130,17 @@ def order():
             order_list = list()
             if orders:
                 for item in orders:
-                    if item.is_effective:
-                        order_item = dict(orderId=item.id,
-                                          orderTime=item.deal_time.strftime("%Y-%m-%d %H:%M:%S"),
-                                          bookName=item.post.book_name,
-                                          imageName=item.post.image_name,
-                                          deadline=item.deadline,
-                                          addr=item.post.seller.address,
-                                          sale=item.post.sale_price,
-                                          status=item.status,
-                                          identity='buyer' if order_type == 'bought' else 'seller')
-                        order_list.append(order_item)
+                    order_item = dict(orderId=item.id,
+                                      dealTime=item.deal_time.strftime("%Y-%m-%d %H:%M:%S"),
+                                      bookName=item.post.book_name,
+                                      imageName=item.post.image_name,
+                                      deadline=item.deadline,
+                                      addr=item.post.seller.address,
+                                      sale=item.post.sale_price,
+                                      status=item.status,
+                                      identity='buyer' if order_type == 'bought' else 'seller',
+                                      isEffective=item.is_effective)
+                    order_list.append(order_item)
                 return jsonify({
                     'msg': 'Request: ok',
                     'orderList': order_list
@@ -151,27 +149,6 @@ def order():
                 return jsonify({'msg': 'Request: ok'}), 204
         else:
             return jsonify({'errMsg': 'Invalid token'}), 403
-    elif request.method == 'DELETE':
-        token = request.form.get('token', '')
-        order_id = request.form.get('orderId', '')
-        if order_id:
-            order_found = Order.get_by_id(order_id)
-            if order_found:
-                if token == order_found.buyer.token:
-                    # noinspection PyBroadException
-                    try:
-                        order_found.is_effective = False
-                        order_found.post.is_valid = True
-                        db.session.commit()
-                        return jsonify({'msg': 'Delete: ok'})
-                    except Exception:
-                        abort(500)
-                else:
-                    return jsonify({'errMsg': 'Invalid token'}), 403
-            else:
-                return jsonify({'errMsg': 'Invalid orderId'}), 404
-        else:
-            return jsonify({'errMsg': 'Need id'}), 400
 
 
 @app.route('/dynamics', methods=['GET'])

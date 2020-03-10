@@ -4,6 +4,9 @@ TOKEN = 'qianwwyyandii'
 
 mp_APPID = 'wx2c9039d168dae712'
 mp_APPSECRET = '7ee01e2425418a8c9291cefeeded09cd'
-DB_URI = 'mysql+pymysql://qww:zdrfvhujm7415963@localhost/bird'
-
 mch_ID = '1578409731'
+
+DB_URI = 'mysql+pymysql://qww:zdrfvhujm7415963@localhost/bird'
+# qiniu
+AK = 'aboRN3j_k6sYgU-JQWJNjecp_wU56tA24c1EN0eQ'
+SK = 'TReUVW1XcEkJC3XSGwOkrYZbB6u-uukJQ-frliZM'
