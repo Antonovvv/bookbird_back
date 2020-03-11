@@ -7,7 +7,7 @@ from qiniu import Auth
 from app import mp_client
 from models import Book, Post, User, CartItem, Order
 from ext import database as db
-from ext import logger
+from ext import logger, SQLAlchemyError, InvalidPostException
 from utils import *
 from config import *
 
@@ -30,19 +30,12 @@ def order():
         if user_found:
             order_found = Order.get_by_id(order_id)
             if order_found:
-                post = order_found.post
-                post_info = dict(bookName=post.book_name,
-                                 imageUrl=bucket_url + post.image_name,
-                                 sale=post.sale_price,
-                                 new=post.new,
-                                 addr=post.seller.address,
-                                 author=post.book.author,
-                                 publisher=post.book.publisher)
-                order_info = dict(dealTime=order_found.deal_time.strftime("%Y-%m-%d %H:%M:%S"),
-                                  deadline=order_found.deadline,
-                                  status=order_found.status,
-                                  deliveryImage=order_found.delivery_image_url,
-                                  isEffective=order_found.is_effective)
+                post_items = order_found.post_items
+                post_info_list = list()
+                for item in post_items:
+                    post_info = item.post.get_post_info()
+                    post_info_list.append(post_info)
+                order_info = order_found.get_order_info()
 
                 if order_found.is_effective and order_found.status == 0:    # 有效的待支付订单
                     remain_time = order_found.get_prepay_remain_time()      # 待支付剩余时间
@@ -57,7 +50,7 @@ def order():
                     else:
                         order_info.setdefault('remainTime', remain_time)
 
-                if user_found.openid == order_found.post.seller_openid:     # 卖方
+                if user_found.openid == order_found.seller_openid:     # 卖方
                     order_info.setdefault('identity', 'seller')
                 elif user_found.openid == order_found.buyer_openid:
                     order_info.setdefault('identity', 'buyer')
@@ -66,7 +59,7 @@ def order():
 
                 return jsonify({
                     'msg': 'Request: ok',
-                    'postInfo': post_info,
+                    'postInfoList': post_info_list,
                     'orderInfo': order_info
                 })
             else:
@@ -75,45 +68,31 @@ def order():
             return jsonify({'errMsg': 'Invalid token'}), 403
     elif request.method == 'POST':
         token = request.form.get('token', '')
-        post_id = request.form.get('postId', '')
+        post_list = request.form.get('postList', '')
         deadline = request.form.get('deadline', '')
 
         user_found = User.get_by_token(token)
         if user_found:
-            if post_id:
-                post_found = Post.get_by_id(post_id)
-                if post_found and post_found.is_valid:
-                    # noinspection PyBroadException
-                    try:
-                        '''order_ = Order(deadline=deadline, post_id=post_id, buyer=user_found.openid)
+            if post_list:
+                post_list = post_list.split(',')    # 参数为字符串，拆分得到字符数组
+                try:
+                    order_, order_post_list_ = Order.create_by_prepay(deadline=deadline, post_list=post_list,
+                                                                      buyer=user_found.openid, pay_client=pay_client)
+                    logger.info('prepay:' + str(order_.id))
+                    params = pay_client.jsapi.get_jsapi_params(prepay_id=order_.prepay_id)  # 支付参数
 
-                        prepay_data = pay_client.order.create(
-                            trade_type='JSAPI', body='不渴鸟BOOKBIRD-书本',
-                            notify_url='https://www.bookbird.cn/api/mp/order/notify',
-                            total_fee=post_found.sale_price, user_id=user_found.openid,
-                            out_trade_no=order_.id, time_start=order_.now, time_expire=order_.now + timedelta(hours=2))
-                        logger.info('prepay:' + str(post_found.id))
-                        
-                        params = pay_client.jsapi.get_jsapi_params(prepay_id=prepay_data['prepay_id'])'''
-                        order_ = Order.create_by_prepay(deadline=deadline, post_in=post_found, buyer=user_found.openid,
-                                                        pay_client=pay_client)
-                        logger.info('prepay:' + str(order_.id))
-
-                        params = pay_client.jsapi.get_jsapi_params(prepay_id=order_.prepay_id)  # 支付参数
-
-                        post_found.is_valid = False
-
-                        db.session.add(order_)
-                        db.session.commit()
-                        return jsonify({
-                            'msg': 'Order Create: ok',
-                            'params': params,
-                            'orderId': order_.id
-                        }), 201
-                    except Exception:
-                        abort(500)
+                    db.session.add_all([order_] + order_post_list_)
+                    db.session.commit()
+                except SQLAlchemyError:
+                    return jsonify({'errMsg': 'SQL ERROR'}), 500
+                except InvalidPostException:
+                    return jsonify({'errMsg': 'Invalid post'}), 400
                 else:
-                    return jsonify({'errMsg': 'Invalid postId'}), 404
+                    return jsonify({
+                        'msg': 'Order Create: ok',
+                        'params': params,
+                        'orderId': order_.id
+                    }), 201
             else:
                 return jsonify({'errMsg': 'Need postId'}), 400
         else:
@@ -206,7 +185,7 @@ def order_notify():
 
     order_found = Order.get_by_id(paid_order_id)
     if order_found:
-        if paid_fee == order_found.post.sale_price:     # 校验返回的订单金额是否与商户侧的订单金额一致
+        if paid_fee == order_found.total_price:     # 校验返回的订单金额是否与商户侧的订单金额一致
             if order_found.is_effective and order_found.status == 0:    # 订单有效且处于待支付状态
                 # noinspection PyBroadException
                 try:

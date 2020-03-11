@@ -11,7 +11,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = DB_URI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 
 db.init_app(app)
-import models.admin, models.user, models.book, models.post, models.cart_item
+import models.admin, models.user, models.book, models.post, models.cart_item, models.order
 
 manager = Manager(app)
 migrate = Migrate(app, db)

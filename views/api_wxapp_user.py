@@ -36,13 +36,14 @@ def user_login():
                 user_ = User(openid=openid, token=token)    # 新增
                 db.session.add(user_)
                 db.session.commit()
+            except Exception:
+                logger.info('fail: ' + openid + token)
+                return jsonify({'errMsg': 'Fail to add new user'}), 500
+            else:
                 return jsonify({
                     'token': token,
                     'isAuthorized': False
                 }), 201
-            except Exception:
-                logger.info('fail: ' + openid + token)
-                return jsonify({'errMsg': 'Fail to add new user'}), 500
         else:
             if token == user_found.token:   # session_key未过期
                 pass
@@ -74,16 +75,7 @@ def posts():
                 if posts:
                     for item in posts:
                         if item.is_valid:
-                            post_item = dict(postId=item.id,
-                                             bookName=item.book_name,
-                                             imageName=item.image_name,
-                                             sale=item.sale_price,
-                                             new=item.new,
-                                             addr=item.seller.address,
-                                             author=item.book.author,
-                                             publisher=item.book.publisher,
-                                             pubdate=item.book.pubdate,
-                                             originalPrice=item.book.original_price)
+                            post_item = item.get_post_info()
                             post_list.append(post_item)
                     return jsonify({
                         'msg': 'Request: ok',
@@ -99,22 +91,23 @@ def posts():
         token = request.form.get('token', '')
         delete_id = request.form.get('deleteId', '')
         if delete_id:
-            post_found = Post.get_by_id(id=delete_id)
+            post_found = Post.get_by_id(delete_id)
             if token == post_found.seller.token:
                 # noinspection PyBroadException
                 try:
                     post_found.is_valid = False
                     db.session.commit()
-                    return jsonify({'msg': 'Delete: ok'})
                 except Exception:
                     abort(500)
+                else:
+                    return jsonify({'msg': 'Delete: ok'})
             else:
                 return jsonify({'errMsg': 'Invalid token'}), 403
         else:
             return jsonify({'errMsg': 'Need id'}), 400
 
 
-@app.route('/orders', methods=['GET', 'DELETE'])
+@app.route('/orders', methods=['GET'])
 def order():
     if request.method == 'GET':
         token = request.args.get('token', '')
@@ -130,16 +123,7 @@ def order():
             order_list = list()
             if orders:
                 for item in orders:
-                    order_item = dict(orderId=item.id,
-                                      dealTime=item.deal_time.strftime("%Y-%m-%d %H:%M:%S"),
-                                      bookName=item.post.book_name,
-                                      imageName=item.post.image_name,
-                                      deadline=item.deadline,
-                                      addr=item.post.seller.address,
-                                      sale=item.post.sale_price,
-                                      status=item.status,
-                                      identity='buyer' if order_type == 'bought' else 'seller',
-                                      isEffective=item.is_effective)
+                    order_item = item.get_preview_info(user=user_found.openid)
                     order_list.append(order_item)
                 return jsonify({
                     'msg': 'Request: ok',
@@ -161,16 +145,7 @@ def dynamic():
         if dynamics:
             for item in dynamics:
                 if item.is_effective:
-                    identity = 'buyer' if user_found.openid == item.buyer_openid else 'seller'
-                    dynamic_item = dict(orderId=item.id,
-                                        orderTime=item.deal_time.strftime("%Y-%m-%d %H:%M:%S"),
-                                        bookName=item.post.book_name,
-                                        imageName=item.post.image_name,
-                                        deadline=item.deadline,
-                                        addr=item.post.seller.address,
-                                        sale=item.post.sale_price,
-                                        identity=identity,
-                                        status=item.status)
+                    dynamic_item = item.get_preview_info(user=user_found.openid)
                     dynamic_list.append(dynamic_item)
             return jsonify({
                 'msg': 'Request: ok',
@@ -185,54 +160,43 @@ def dynamic():
 @app.route('/cart', methods=['GET', 'POST', 'DELETE'])
 def cart():
     if request.method == 'POST':
-        token = request.form['token']
-        post_id = int(request.form['postId'])   # 参数为字符，转为int
-        if token and post_id:
-            user_found = User.get_by_token(token)
-            if user_found:
-                if post_id not in [item.post_id for item in user_found.cart]:
+        token = request.form.get('token', '')
+        post_id = request.form.get('postId', '')
+        user_found = User.get_by_token(token)
+        if user_found:
+            post_found = Post.get_valid_by_id(post_id)
+            if post_found:
+                if int(post_id) not in [item.post_id for item in user_found.cart]:
+                    """接收参数post_id为字符串，sql查询时会自动转为数字，但在比较时需要转为数字"""
                     # noinspection PyBroadException
                     try:
                         cart_item_ = CartItem(openid=user_found.openid, post_id=post_id)
                         db.session.add(cart_item_)
                         db.session.commit()
+                    except Exception:
+                        abort(500)
+                    else:
                         return jsonify({
                             'cartItemId': cart_item_.id
                         }), 201
-                    except Exception:
-                        abort(500)
                 else:
-                    return jsonify({'errMsg': 'Item exists'}), 403
+                    return jsonify({'errMsg': 'Item exists'}), 400
             else:
-                return jsonify({'errMsg': 'User not found'}), 404
+                return jsonify({'errMsg': 'Invalid postId'}), 404
         else:
-            return jsonify({'errMsg': 'Need params'}), 404
+            return jsonify({'errMsg': 'Invalid token'}), 403
 
     elif request.method == 'GET':
         token = request.args.get('token', '')
         if token:
             user_found = User.get_by_token(token)
             if user_found:  # 根据token查找到用户
-                # cart_items = CartItem.get_by_openid(openid=user_found.openid)
-                cart_items = user_found.cart
-                # logger.info(cart_items)
-
+                cart_items = CartItem.get_by_openid(openid=user_found.openid)   # 按添加顺序倒序
+                # cart_items = user_found.cart
                 cart_list = list()
                 if cart_items:
                     for item in cart_items:
-                        cart_item = dict(cartItemId=item.id,
-                                         postId=item.post.id,
-                                         bookName=item.post.book_name,
-                                         imageName=item.post.image_name,
-                                         sale=item.post.sale_price,
-                                         new=item.post.new,
-                                         addr=item.post.seller.address,
-                                         author=item.post.book.author,
-                                         publisher=item.post.book.publisher,
-                                         pubdate=item.post.book.pubdate,
-                                         originalPrice=item.post.book.original_price,
-                                         checked=item.is_checked,
-                                         valid=item.post.is_valid)
+                        cart_item = item.get_cart_item_info()
                         cart_list.append(cart_item)
 
                     return jsonify({
@@ -248,24 +212,26 @@ def cart():
 
     elif request.method == 'DELETE':
         token = request.form.get('token', '')
-        delete_list = request.form['deleteList'].split(',')     # 参数为字符串，拆分得到字符数组，逐个转为int
+        delete_list = request.form.get('deleteList', '')
         # logger.info(delete_list)
         if delete_list:
-            for item_id in delete_list:
-                cart_item = CartItem.get_by_id(item_id=int(item_id))
-                if cart_item:
-                    if token == cart_item.user.token:
-                        # noinspection PyBroadException
-                        try:
+            delete_list = delete_list.split(',')    # 参数为字符串，拆分得到字符数组
+            # noinspection PyBroadException
+            try:
+                for item_id in delete_list:
+                    cart_item = CartItem.get_by_id(item_id=item_id)
+                    if cart_item:
+                        if token == cart_item.user.token:
                             db.session.delete(cart_item)
                             db.session.commit()
-                            return jsonify({'msg': 'Delete: ok'})
-                        except Exception:
-                            abort(500)
+                        else:
+                            return jsonify({'errMsg': 'Invalid token'}), 403
                     else:
-                        return jsonify({'errMsg': 'Invalid token'}), 403
-                else:
-                    return jsonify({'errMsg': 'CartItem not found'}), 204
+                        return jsonify({'errMsg': 'CartItem not found'}), 204
+            except Exception:
+                abort(500)
+            else:
+                return jsonify({'msg': 'Delete: ok'})
         else:
             return jsonify({'errMsg': 'Need cart item id'}), 400
 
@@ -293,12 +259,13 @@ def user():
                     db.session.commit()
 
                     up_token = q.upload_token(bucket_name, card_image_name, 3600)
+                except Exception:
+                    abort(500)
+                else:
                     return jsonify({
                         'upToken': up_token,
                         'key': card_image_name
                     })
-                except Exception:
-                    abort(500)
             else:
                 return jsonify({'errMsg': 'Full information required'}), 400
         else:

@@ -6,6 +6,8 @@ from sqlalchemy.sql.expression import func
 from ext import database as db
 from utils import *
 
+bucket_url = 'http://img.bookbird.cn/'
+
 
 class Post(db.Model):
     __tablename__ = "post"
@@ -27,7 +29,7 @@ class Post(db.Model):
     def __init__(self, isbn, openid, bookname='', price=0, new=0, description=''):
         self.book_name = bookname
         self.image_name = uuid.uuid4().hex  # 随机hash值作为图片文件名
-        self.post_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.post_time = datetime.now()
         self.sale_price = price
         self.new = new
         self.description = description
@@ -36,9 +38,30 @@ class Post(db.Model):
         self.seller_openid = openid
         self.is_valid = True
 
+    def get_post_info(self):
+        """
+        获取该post信息
+        :return: {bookName, imageUrl, sale, new, addr, author, publisher}
+        """
+        return dict(postId=self.id,
+                    bookName=self.book_name,
+                    imageUrl=bucket_url + self.image_name,
+                    postTime=self.post_time.strftime("%Y-%m-%d %H:%M:%S"),
+                    sale=self.sale_price,
+                    new=self.new,
+                    addr=self.seller.address,
+                    author=self.book.author,
+                    publisher=self.book.publisher,
+                    pubdate=self.book.pubdate,
+                    originalPrice=self.book.original_price)
+
     @classmethod
-    def get_by_id(cls, id):
-        return cls.query.filter_by(id=id).first()
+    def get_by_id(cls, post_id):
+        return cls.query.filter_by(id=post_id).first()
+
+    @classmethod
+    def get_valid_by_id(cls, post_id):
+        return cls.query.filter_by(id=post_id, is_valid=True).first()
 
     @classmethod
     def get_by_isbn(cls, isbn):
